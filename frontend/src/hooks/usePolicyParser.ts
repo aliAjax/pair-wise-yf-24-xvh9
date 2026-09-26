@@ -1,7 +1,10 @@
 import { computed, ref } from "vue";
-export function usePolicyParser<T>(rows: T[] = []) {
-  const page = ref(1);
-  const pageSize = 8;
-  const pageRows = computed(() => rows.slice((page.value - 1) * pageSize, page.value * pageSize));
-  return { page, pageSize, pageRows, total: rows.length };
+import { parseSections } from "../utils/policyDiff";
+import type { ParsedSection } from "../types/SectionDiff";
+
+export function usePolicyParser(rawText: string) {
+  const source = ref(rawText);
+  const sections = computed<ParsedSection[]>(() => parseSections(source.value));
+  const isEmpty = computed(() => sections.value.length === 0);
+  return { source, sections, isEmpty };
 }

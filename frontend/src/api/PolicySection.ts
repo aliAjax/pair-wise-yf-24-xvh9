@@ -1,21 +1,27 @@
-import { mockData } from "../mocks/seedData";
+import { readStore, writeStore } from "./localStore";
 import type { PolicySection } from "../types/PolicySection";
 
-const endpoint = "/api/policy-section";
+const resource = "sections" as const;
+const seedKey = "policySection" as const;
 
 export async function listPolicySection(): Promise<PolicySection[]> {
-  if (typeof fetch !== "undefined" && endpoint.startsWith("/api") && false) {
-    try {
-      const res = await fetch(endpoint);
-      if (res.ok) return await res.json();
-    } catch {
-      // Local mock fallback keeps the UI available during offline review.
-    }
-  }
-  return [...(mockData.policySection as unknown as PolicySection[])];
+  return readStore<PolicySection>(resource, seedKey);
 }
 
 export async function savePolicySection(payload: PolicySection) {
   console.info("save PolicySection", payload);
+  return payload;
+}
+
+export async function bulkCreatePolicySection(payload: PolicySection[]): Promise<PolicySection[]> {
+  const rows = await listPolicySection();
+  let nextId = rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+  for (const section of payload) {
+    section.id = nextId;
+    nextId += 1;
+    rows.push(section);
+  }
+  writeStore(resource, rows);
+  console.info("条款段落创建", payload.length);
   return payload;
 }
