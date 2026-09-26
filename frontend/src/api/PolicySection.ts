@@ -1,21 +1,20 @@
 import { mockData } from "../mocks/seedData";
+import { loadRows, saveRows, upsertRow } from "../utils/storage";
+import { LOG_TEMPLATES } from "../constants/logTemplates";
 import type { PolicySection } from "../types/PolicySection";
 
-const endpoint = "/api/policy-section";
+const STORAGE_KEY = "sections";
 
 export async function listPolicySection(): Promise<PolicySection[]> {
-  if (typeof fetch !== "undefined" && endpoint.startsWith("/api") && false) {
-    try {
-      const res = await fetch(endpoint);
-      if (res.ok) return await res.json();
-    } catch {
-      // Local mock fallback keeps the UI available during offline review.
-    }
-  }
-  return [...(mockData.policySection as unknown as PolicySection[])];
+  return loadRows<PolicySection>(STORAGE_KEY, mockData.policySection as unknown as PolicySection[]);
 }
 
-export async function savePolicySection(payload: PolicySection) {
-  console.info("save PolicySection", payload);
-  return payload;
+export async function savePolicySection(payload: PolicySection): Promise<PolicySection[]> {
+  console.info(LOG_TEMPLATES.PolicySection[1], payload.section_no);
+  return upsertRow<PolicySection>(STORAGE_KEY, mockData.policySection as unknown as PolicySection[], payload);
+}
+
+export async function replacePolicySection(rows: PolicySection[]): Promise<void> {
+  console.info(LOG_TEMPLATES.PolicySection[0], rows.length);
+  saveRows<PolicySection>(STORAGE_KEY, rows);
 }

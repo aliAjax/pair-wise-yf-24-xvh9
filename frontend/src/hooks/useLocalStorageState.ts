@@ -1,7 +1,23 @@
-import { computed, ref } from "vue";
-export function useLocalStorageState<T>(rows: T[] = []) {
-  const page = ref(1);
-  const pageSize = 8;
-  const pageRows = computed(() => rows.slice((page.value - 1) * pageSize, page.value * pageSize));
-  return { page, pageSize, pageRows, total: rows.length };
+import { ref, watch, type Ref } from "vue";
+
+const PREFIX = "policy-diff:";
+
+// 响应式状态与 localStorage 双向同步，页面刷新后保留。
+export function useLocalStorageState<T>(key: string, initial: T): Ref<T> {
+  let value = initial;
+  try {
+    const raw = localStorage.getItem(PREFIX + key);
+    if (raw) value = JSON.parse(raw) as T;
+  } catch {
+    // 读取失败时退回默认值。
+  }
+  const state = ref(value) as Ref<T>;
+  watch(
+    state,
+    (next) => {
+      localStorage.setItem(PREFIX + key, JSON.stringify(next));
+    },
+    { deep: true }
+  );
+  return state;
 }

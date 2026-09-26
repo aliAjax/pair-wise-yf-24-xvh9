@@ -12,7 +12,11 @@ export const routes = [
     "route": "/risks"
   },
   {
-    "name": "审阅清单",
+    "name": "发布门禁",
     "route": "/review"
+  },
+  {
+    "name": "发布快照",
+    "route": "/snapshots"
   }
 ] as const;

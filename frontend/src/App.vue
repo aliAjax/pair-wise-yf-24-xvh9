@@ -1,12 +1,51 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref, type Component } from "vue";
 import { routes } from "./router/routes";
-import { mockData } from "./mocks/seedData";
+import { usePolicyDocumentStore } from "./stores/PolicyDocumentStore";
+import { usePolicySectionStore } from "./stores/PolicySectionStore";
+import { useDiffResultStore } from "./stores/DiffResultStore";
+import { useReviewNoteStore } from "./stores/ReviewNoteStore";
+import { useGateReviewStore } from "./stores/GateReviewStore";
+import { useReleaseSnapshotStore } from "./stores/ReleaseSnapshotStore";
+import DocumentsPage from "./pages/DocumentsPage.vue";
+import ComparePage from "./pages/ComparePage.vue";
+import RisksPage from "./pages/RisksPage.vue";
+import ReviewPage from "./pages/ReviewPage.vue";
+import SnapshotsPage from "./pages/SnapshotsPage.vue";
 import StatusBadge from "./components/common/StatusBadge.vue";
-import StatCard from "./components/common/StatCard.vue";
-const active = ref<string>(routes[0]?.route ?? "/dashboard");
+
+const pages: Record<string, Component> = {
+  "/documents": DocumentsPage,
+  "/compare": ComparePage,
+  "/risks": RisksPage,
+  "/review": ReviewPage,
+  "/snapshots": SnapshotsPage
+};
+
+const active = ref<string>(routes[0]?.route ?? "/documents");
 const current = computed(() => routes.find((route) => route.route === active.value) ?? routes[0]);
-const entries = Object.entries(mockData);
+const currentPage = computed(() => pages[active.value] ?? DocumentsPage);
+const ready = ref(false);
+
+onMounted(async () => {
+  const documentStore = usePolicyDocumentStore();
+  const sectionStore = usePolicySectionStore();
+  const diffStore = useDiffResultStore();
+  const noteStore = useReviewNoteStore();
+  const gateStore = useGateReviewStore();
+  const snapshotStore = useReleaseSnapshotStore();
+  await Promise.all([
+    documentStore.load(),
+    sectionStore.load(),
+    diffStore.load(),
+    noteStore.load(),
+    gateStore.load(),
+    snapshotStore.load()
+  ]);
+  // 首次启动：把种子文档解析成条款，并为最新两个版本生成第一轮门禁清单。
+  await documentStore.ensureDerived();
+  ready.value = true;
+});
 </script>
 
 <template>
@@ -18,9 +57,12 @@ const entries = Object.entries(mockData);
       </nav>
     </aside>
     <main class="page">
-      <section class="page-head"><div><p class="eyebrow">policy-diff</p><h1>{{ current?.name }}</h1></div><StatusBadge value="LOCAL_DATA" /></section>
-      <section class="metrics"><StatCard label="核心模型" :value="entries.length" /><StatCard label="共享枚举" :value="3" /><StatCard label="本地记录" :value="entries.reduce((s, [, rows]) => s + rows.length, 0)" /></section>
-      <section class="workbench"><div class="panel wide"><h2>业务数据</h2><article class="row" v-for="[key, rows] in entries" :key="key"><strong>{{ key }}</strong><span>{{ rows.length }} 条</span><StatusBadge value="READY" /></article></div><div class="panel"><h2>联动检查</h2><p>页面、store、API、构造器、日志模板和枚举常量均按提示词拆分。</p></div></section>
+      <section class="page-head">
+        <div><p class="eyebrow">policy-diff</p><h1>{{ current?.name }}</h1></div>
+        <StatusBadge value="LOCAL_DATA" />
+      </section>
+      <component :is="currentPage" v-if="ready" />
+      <p v-else class="hint">正在加载本地数据…</p>
     </main>
   </div>
 </template>
